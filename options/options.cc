@@ -52,10 +52,6 @@ ParseResult SetOptionValue(int argc, char** argv, int& index,
 
 ParseResult ParseNamedOption(const std::string& arg, int argc, char** argv,
                              int& index, Options& options) {
-  if (arg == "--config-new") {
-    return SetOptionValue(argc, argv, index, arg, "a path",
-                          options.config_new_path);
-  }
   if (arg == "--name") {
     return SetOptionValue(argc, argv, index, arg, "a client entity name",
                           options.client_name);
@@ -78,7 +74,7 @@ ParseResult ParseNamedOption(const std::string& arg, int argc, char** argv,
 
 void PrintUsage(const char* program) {
   std::cerr << "Usage: " << program
-            << " <pool> --config-new path [--cursor cursor]"
+            << " <config> <pool> [--cursor cursor]"
                " [--name client.admin] [--cluster ceph]\n";
 }
 
@@ -99,19 +95,24 @@ std::optional<Options> ParseOptions(int argc, char** argv) {
       continue;
     }
 
-    if (!options.pool.empty()) {
-      std::cerr << "unexpected extra argument: " << arg << '\n';
-      return std::nullopt;
+    if (options.config_path.empty()) {
+      options.config_path = arg;
+      continue;
     }
-    options.pool = arg;
-  }
-
-  if (options.pool.empty()) {
-    std::cerr << "pool is required\n";
+    if (options.pool.empty()) {
+      options.pool = arg;
+      continue;
+    }
+    std::cerr << "unexpected extra argument: " << arg << '\n';
     return std::nullopt;
   }
-  if (options.config_new_path.empty()) {
-    std::cerr << "--config-new is required\n";
+
+  if (options.config_path.empty()) {
+    std::cerr << "config is required\n";
+    return std::nullopt;
+  }
+  if (options.pool.empty()) {
+    std::cerr << "pool is required\n";
     return std::nullopt;
   }
   return options;

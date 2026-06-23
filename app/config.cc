@@ -1,4 +1,4 @@
-#include "app/config_new.h"
+#include "app/config.h"
 
 #include <filesystem>
 #include <fstream>
@@ -47,7 +47,7 @@ void ValidateConfigMode(const std::string& path) {
 
 }  // namespace
 
-NewConfig ReadNewConfig(const std::string& path) {
+Config ReadConfig(const std::string& path) {
   ValidateConfigMode(path);
 
   std::ifstream input(path);
@@ -55,7 +55,7 @@ NewConfig ReadNewConfig(const std::string& path) {
     throw std::runtime_error("opening config file failed: " + path);
   }
 
-  NewConfig config;
+  Config config;
   std::string line;
   int line_number = 0;
   while (std::getline(input, line)) {

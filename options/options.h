@@ -4,8 +4,8 @@
 #include <string>
 
 struct Options {
+  std::string config_path;
   std::string pool;
-  std::string config_new_path;
   std::optional<std::string> cursor;
   std::string client_name = "client.admin";
   std::string cluster_name = "ceph";

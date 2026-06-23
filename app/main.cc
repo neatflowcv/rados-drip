@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 
-#include "app/config_new.h"
+#include "app/config.h"
 #include "client/client.h"
 #include "options/options.h"
 
@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
     return 2;
   }
   try {
-    const NewConfig config = ReadNewConfig(options->config_new_path);
+    const Config config = ReadConfig(options->config_path);
     Client client({.host = config.hosts, .key = config.key},
                   options->client_name, options->cluster_name);
     PrintListObjectsResult(client.ListObjects(options->pool, options->cursor),

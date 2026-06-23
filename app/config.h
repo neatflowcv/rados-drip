@@ -2,9 +2,9 @@
 
 #include <string>
 
-struct NewConfig {
+struct Config {
   std::string hosts;
   std::string key;
 };
 
-NewConfig ReadNewConfig(const std::string& path);
+Config ReadConfig(const std::string& path);
