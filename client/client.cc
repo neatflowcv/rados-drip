@@ -20,6 +20,21 @@ std::runtime_error RadosRuntimeError(const std::string& message, int ret) {
                             std::to_string(ret) + ")");
 }
 
+void InitCluster(librados::Rados& cluster, const std::string& client_name,
+                 const std::string& cluster_name) {
+  const int ret = cluster.init2(client_name.c_str(), cluster_name.c_str(), 0);
+  if (ret < 0) {
+    throw RadosRuntimeError("rados init failed", ret);
+  }
+}
+
+void ConnectCluster(librados::Rados& cluster) {
+  const int ret = cluster.connect();
+  if (ret < 0) {
+    throw RadosRuntimeError("connecting to Ceph failed", ret);
+  }
+}
+
 std::optional<std::string> DefaultKeyringPath(
     const std::optional<std::string>& conf_path,
     const std::string& client_name) {
@@ -45,13 +60,10 @@ Client::Client(const std::optional<std::string>& conf_path,
                const std::optional<std::string>& keyring_path,
                const std::string& client_name,
                const std::string& cluster_name) {
-  int ret = cluster_.init2(client_name.c_str(), cluster_name.c_str(), 0);
-  if (ret < 0) {
-    throw RadosRuntimeError("rados init failed", ret);
-  }
+  InitCluster(cluster_, client_name, cluster_name);
 
   try {
-    ret = cluster_.conf_read_file(conf_path ? conf_path->c_str() : nullptr);
+    int ret = cluster_.conf_read_file(conf_path ? conf_path->c_str() : nullptr);
     if (ret < 0) {
       throw RadosRuntimeError("reading Ceph config failed", ret);
     }
@@ -67,10 +79,36 @@ Client::Client(const std::optional<std::string>& conf_path,
       }
     }
 
-    ret = cluster_.connect();
+    ConnectCluster(cluster_);
+    connected_ = true;
+  } catch (...) {
+    cluster_.shutdown();
+    throw;
+  }
+}
+
+Client::Client(const InlineConnectionOptions& options,
+               const std::string& client_name,
+               const std::string& cluster_name) {
+  InitCluster(cluster_, client_name, cluster_name);
+
+  try {
+    int ret = cluster_.conf_set("mon_host", options.host.c_str());
     if (ret < 0) {
-      throw RadosRuntimeError("connecting to Ceph failed", ret);
+      throw RadosRuntimeError("setting mon_host failed", ret);
     }
+
+    ret = cluster_.conf_set("keyring", "");
+    if (ret < 0) {
+      throw RadosRuntimeError("disabling keyring search failed", ret);
+    }
+
+    ret = cluster_.conf_set("key", options.key.c_str());
+    if (ret < 0) {
+      throw RadosRuntimeError("setting CephX key failed", ret);
+    }
+
+    ConnectCluster(cluster_);
     connected_ = true;
   } catch (...) {
     cluster_.shutdown();

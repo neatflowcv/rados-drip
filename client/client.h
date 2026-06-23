@@ -13,11 +13,18 @@ struct ListObjectsResult {
   bool is_end = false;
 };
 
+struct InlineConnectionOptions {
+  std::string host;
+  std::string key;
+};
+
 class Client {
  public:
   Client(const std::optional<std::string>& conf_path,
          const std::optional<std::string>& keyring_path,
          const std::string& client_name, const std::string& cluster_name);
+  Client(const InlineConnectionOptions& options, const std::string& client_name,
+         const std::string& cluster_name);
   ~Client();
 
   ListObjectsResult ListObjects(const std::string& pool,

@@ -42,6 +42,24 @@ ParseResult ParseNamedOption(const std::string& arg, int argc, char** argv,
     options.keyring_path = *value;
     return ParseResult::kParsed;
   }
+  if (arg == "--host") {
+    const auto value =
+        ReadOptionValue(argc, argv, index, arg, "a monitor host");
+    if (!value) {
+      return ParseResult::kError;
+    }
+    options.host = *value;
+    return ParseResult::kParsed;
+  }
+  if (arg == "--key") {
+    const auto value =
+        ReadOptionValue(argc, argv, index, arg, "a base64 CephX key");
+    if (!value) {
+      return ParseResult::kError;
+    }
+    options.key = *value;
+    return ParseResult::kParsed;
+  }
   if (arg == "--name") {
     const auto value =
         ReadOptionValue(argc, argv, index, arg, "a client entity name");
@@ -80,7 +98,8 @@ ParseResult ParseNamedOption(const std::string& arg, int argc, char** argv,
 void PrintUsage(const char* program) {
   std::cerr << "Usage: " << program
             << " <pool> [-c ceph.conf] [--name client.admin]"
-               " [--cluster ceph] [-k keyring] [--cursor cursor]\n";
+               " [--cluster ceph] [-k keyring] [--host mon_host]"
+               " [--key cephx_key] [--cursor cursor]\n";
 }
 
 std::optional<Options> ParseOptions(int argc, char** argv) {
@@ -109,6 +128,14 @@ std::optional<Options> ParseOptions(int argc, char** argv) {
 
   if (options.pool.empty()) {
     std::cerr << "pool is required\n";
+    return std::nullopt;
+  }
+  if (options.host.has_value() != options.key.has_value()) {
+    std::cerr << "--host and --key must be used together\n";
+    return std::nullopt;
+  }
+  if (options.host && (options.conf_path || options.keyring_path)) {
+    std::cerr << "--host/--key cannot be combined with --conf or --keyring\n";
     return std::nullopt;
   }
   return options;
