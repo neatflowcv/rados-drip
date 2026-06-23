@@ -9,6 +9,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_executable(rados-drip
     app/main.cc
     client/client.cc
+    client/object.cc
     options/options.cc
 )
 target_include_directories(rados-drip PRIVATE

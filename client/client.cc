@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cstring>
 #include <filesystem>
-#include <iostream>
 #include <stdexcept>
 #include <vector>
 
@@ -85,15 +84,13 @@ Client::~Client() {
   }
 }
 
-int Client::ListObjects(const std::string& pool,
-                        const std::optional<std::string>& cursor) {
+ListObjectsResult Client::ListObjects(
+    const std::string& pool, const std::optional<std::string>& cursor) {
   int ret = 0;
   librados::IoCtx ioctx;
   ret = cluster_.ioctx_create(pool.c_str(), ioctx);
   if (ret < 0) {
-    std::cerr << "opening pool '" << pool << "' failed: " << RadosError(ret)
-              << " (" << ret << ")\n";
-    return 1;
+    throw RadosRuntimeError("opening pool '" + pool + "' failed", ret);
   }
   ioctx.set_namespace(librados::all_nspaces);
 
@@ -101,8 +98,7 @@ int Client::ListObjects(const std::string& pool,
   const librados::ObjectCursor end = ioctx.object_list_end();
   if (cursor) {
     if (!current.from_str(*cursor)) {
-      std::cerr << "invalid cursor: " << *cursor << '\n';
-      return 1;
+      throw std::runtime_error("invalid cursor: " + *cursor);
     }
   }
 
@@ -111,24 +107,15 @@ int Client::ListObjects(const std::string& pool,
   ret = ioctx.object_list(current, end, kObjectListBatchSize, {}, &objects,
                           &next);
   if (ret < 0) {
-    std::cerr << "listing objects failed: " << RadosError(ret) << " (" << ret
-              << ")\n";
-    return 1;
+    throw RadosRuntimeError("listing objects failed", ret);
   }
 
+  ListObjectsResult results;
+  results.objects.reserve(objects.size());
   for (const auto& object : objects) {
-    if (!object.nspace.empty()) {
-      std::cout << object.nspace << '\t';
-    }
-    std::cout << object.oid << '\n';
+    results.objects.emplace_back(object.oid, object.nspace);
   }
-
-  std::cerr << "listed " << objects.size() << " object(s) from pool '" << pool
-            << "'\n";
-  std::cerr << "next cursor: " << next.to_str() << '\n';
-  if (ioctx.object_list_is_end(next)) {
-    std::cerr << "end of object listing\n";
-  }
-
-  return 0;
+  results.next_cursor = next.to_str();
+  results.is_end = ioctx.object_list_is_end(next);
+  return results;
 }
