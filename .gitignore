@@ -1,1 +1,6 @@
+.*
+!.gitignore
+!.clang-tidy
+!.clang-format
+
 /build/
