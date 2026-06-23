@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <cstring>
-#include <filesystem>
 #include <stdexcept>
 #include <vector>
 
@@ -35,57 +34,7 @@ void ConnectCluster(librados::Rados& cluster) {
   }
 }
 
-std::optional<std::string> DefaultKeyringPath(
-    const std::optional<std::string>& conf_path,
-    const std::string& client_name) {
-  if (!conf_path) {
-    return std::nullopt;
-  }
-
-  const std::filesystem::path config_path(*conf_path);
-  const std::filesystem::path conf_dir = config_path.has_parent_path()
-                                             ? config_path.parent_path()
-                                             : std::filesystem::path(".");
-  const std::filesystem::path keyring_path =
-      conf_dir / ("ceph." + client_name + ".keyring");
-  if (std::filesystem::exists(keyring_path)) {
-    return keyring_path.string();
-  }
-  return std::nullopt;
-}
-
 }  // namespace
-
-Client::Client(const std::optional<std::string>& conf_path,
-               const std::optional<std::string>& keyring_path,
-               const std::string& client_name,
-               const std::string& cluster_name) {
-  InitCluster(cluster_, client_name, cluster_name);
-
-  try {
-    int ret = cluster_.conf_read_file(conf_path ? conf_path->c_str() : nullptr);
-    if (ret < 0) {
-      throw RadosRuntimeError("reading Ceph config failed", ret);
-    }
-
-    const std::optional<std::string> resolved_keyring_path =
-        keyring_path ? keyring_path
-                     : DefaultKeyringPath(conf_path, client_name);
-    if (resolved_keyring_path) {
-      ret = cluster_.conf_set("keyring", resolved_keyring_path->c_str());
-      if (ret < 0) {
-        throw RadosRuntimeError(
-            "setting keyring '" + *resolved_keyring_path + "' failed", ret);
-      }
-    }
-
-    ConnectCluster(cluster_);
-    connected_ = true;
-  } catch (...) {
-    cluster_.shutdown();
-    throw;
-  }
-}
 
 Client::Client(const InlineConnectionOptions& options,
                const std::string& client_name,

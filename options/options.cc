@@ -52,24 +52,9 @@ ParseResult SetOptionValue(int argc, char** argv, int& index,
 
 ParseResult ParseNamedOption(const std::string& arg, int argc, char** argv,
                              int& index, Options& options) {
-  if (arg == "-c" || arg == "--conf") {
-    return SetOptionValue(argc, argv, index, arg, "a path", options.conf_path);
-  }
-  if (arg == "-k" || arg == "--keyring") {
-    return SetOptionValue(argc, argv, index, arg, "a path",
-                          options.keyring_path);
-  }
   if (arg == "--config-new") {
     return SetOptionValue(argc, argv, index, arg, "a path",
                           options.config_new_path);
-  }
-  if (arg == "--host") {
-    return SetOptionValue(argc, argv, index, arg, "a monitor host",
-                          options.host);
-  }
-  if (arg == "--key") {
-    return SetOptionValue(argc, argv, index, arg, "a base64 CephX key",
-                          options.key);
   }
   if (arg == "--name") {
     return SetOptionValue(argc, argv, index, arg, "a client entity name",
@@ -93,9 +78,8 @@ ParseResult ParseNamedOption(const std::string& arg, int argc, char** argv,
 
 void PrintUsage(const char* program) {
   std::cerr << "Usage: " << program
-            << " <pool> [-c ceph.conf] [--name client.admin]"
-               " [--cluster ceph] [-k keyring] [--config-new path]"
-               " [--host mon_host] [--key cephx_key] [--cursor cursor]\n";
+            << " <pool> --config-new path [--cursor cursor]"
+               " [--name client.admin] [--cluster ceph]\n";
 }
 
 std::optional<Options> ParseOptions(int argc, char** argv) {
@@ -126,18 +110,8 @@ std::optional<Options> ParseOptions(int argc, char** argv) {
     std::cerr << "pool is required\n";
     return std::nullopt;
   }
-  if (options.host.has_value() != options.key.has_value()) {
-    std::cerr << "--host and --key must be used together\n";
-    return std::nullopt;
-  }
-  if (options.host && (options.conf_path || options.keyring_path)) {
-    std::cerr << "--host/--key cannot be combined with --conf or --keyring\n";
-    return std::nullopt;
-  }
-  if (options.config_new_path && (options.conf_path || options.keyring_path ||
-                                  options.host || options.key)) {
-    std::cerr << "--config-new cannot be combined with --conf, --keyring,"
-                 " --host, or --key\n";
+  if (options.config_new_path.empty()) {
+    std::cerr << "--config-new is required\n";
     return std::nullopt;
   }
   return options;

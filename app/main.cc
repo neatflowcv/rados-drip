@@ -41,24 +41,11 @@ int main(int argc, char** argv) {
     return 2;
   }
   try {
-    if (options->config_new_path) {
-      const NewConfig config = ReadNewConfig(*options->config_new_path);
-      Client client({.host = config.hosts, .key = config.key},
-                    options->client_name, options->cluster_name);
-      PrintListObjectsResult(client.ListObjects(options->pool, options->cursor),
-                             options->pool);
-    } else if (options->host && options->key) {
-      Client client(
-          {.host = options->host.value(), .key = options->key.value()},
-          options->client_name, options->cluster_name);
-      PrintListObjectsResult(client.ListObjects(options->pool, options->cursor),
-                             options->pool);
-    } else {
-      Client client(options->conf_path, options->keyring_path,
-                    options->client_name, options->cluster_name);
-      PrintListObjectsResult(client.ListObjects(options->pool, options->cursor),
-                             options->pool);
-    }
+    const NewConfig config = ReadNewConfig(options->config_new_path);
+    Client client({.host = config.hosts, .key = config.key},
+                  options->client_name, options->cluster_name);
+    PrintListObjectsResult(client.ListObjects(options->pool, options->cursor),
+                           options->pool);
     return 0;
   } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';
