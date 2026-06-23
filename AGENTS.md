@@ -27,6 +27,17 @@ clang-format -i app/main.cc
 run-clang-tidy -p build -fix
 ```
 
+## Verify
+
+Before handing off changes, run format, lint, build, and help output checks.
+
+```sh
+clang-format -i app/main.cc app/config.cc app/config.h client/client.cc client/client.h client/object.cc client/object.h options/options.cc options/options.h
+run-clang-tidy -p build -fix
+cmake --build build
+./build/rados-drip --help
+```
+
 ## Run
 
 ```sh
