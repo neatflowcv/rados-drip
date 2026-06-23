@@ -24,5 +24,5 @@ clang-format -i app/main.cc
 ## Run
 
 ```sh
-./build/cpp_structure
+./build/rados-drip
 ```
