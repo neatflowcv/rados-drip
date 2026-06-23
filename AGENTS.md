@@ -6,6 +6,7 @@ This is a small C++ project using CMake.
 
 - `CMakeLists.txt`: root CMake configuration
 - `app/main.cc`: application entry point
+- `config/`: configuration parsing
 - `build/`: local CMake build output
 
 ## Build
@@ -18,7 +19,7 @@ cmake --build build
 ## Format
 
 ```sh
-clang-format -i app/main.cc
+clang-format -i app/main.cc config/config.cc config/config.h
 ```
 
 ## Lint
@@ -32,7 +33,7 @@ run-clang-tidy -p build -fix
 Before handing off changes, run format, lint, build, and help output checks.
 
 ```sh
-clang-format -i app/main.cc app/config.cc app/config.h client/client.cc client/client.h client/object.cc client/object.h options/options.cc options/options.h
+clang-format -i app/main.cc config/config.cc config/config.h client/client.cc client/client.h client/object.cc client/object.h options/options.cc options/options.h
 run-clang-tidy -p build -fix
 cmake --build build
 ./build/rados-drip --help

@@ -1,8 +1,8 @@
 #include <iostream>
 #include <string>
 
-#include "app/config.h"
 #include "client/client.h"
+#include "config/config.h"
 #include "options/options.h"
 
 namespace {
