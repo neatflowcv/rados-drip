@@ -6,6 +6,7 @@
 #include <optional>
 #include <rados/librados.hpp>
 #include <string>
+#include <string_view>
 
 namespace {
 
@@ -15,6 +16,12 @@ struct Options {
   std::optional<std::string> keyring_path;
   std::string client_name = "client.admin";
   std::string cluster_name = "ceph";
+};
+
+enum class ParseResult : std::uint8_t {
+  kParsed,
+  kPositional,
+  kError,
 };
 
 void PrintUsage(const char* program) {
@@ -45,6 +52,59 @@ std::optional<std::string> DefaultKeyringPath(const Options& options) {
   return std::nullopt;
 }
 
+std::optional<std::string> ReadOptionValue(int argc, char** argv, int& index,
+                                           const std::string& option,
+                                           std::string_view value_description) {
+  if (++index >= argc) {
+    std::cerr << option << " requires " << value_description << '\n';
+    return std::nullopt;
+  }
+  return argv[index];
+}
+
+ParseResult ParseNamedOption(const std::string& arg, int argc, char** argv,
+                             int& index, Options& options) {
+  if (arg == "-c" || arg == "--conf") {
+    const auto value = ReadOptionValue(argc, argv, index, arg, "a path");
+    if (!value) {
+      return ParseResult::kError;
+    }
+    options.conf_path = *value;
+    return ParseResult::kParsed;
+  }
+  if (arg == "-k" || arg == "--keyring") {
+    const auto value = ReadOptionValue(argc, argv, index, arg, "a path");
+    if (!value) {
+      return ParseResult::kError;
+    }
+    options.keyring_path = *value;
+    return ParseResult::kParsed;
+  }
+  if (arg == "--name") {
+    const auto value =
+        ReadOptionValue(argc, argv, index, arg, "a client entity name");
+    if (!value) {
+      return ParseResult::kError;
+    }
+    options.client_name = *value;
+    return ParseResult::kParsed;
+  }
+  if (arg == "--cluster") {
+    const auto value =
+        ReadOptionValue(argc, argv, index, arg, "a cluster name");
+    if (!value) {
+      return ParseResult::kError;
+    }
+    options.cluster_name = *value;
+    return ParseResult::kParsed;
+  }
+  if (!arg.empty() && arg.front() == '-') {
+    std::cerr << "unknown option: " << arg << '\n';
+    return ParseResult::kError;
+  }
+  return ParseResult::kPositional;
+}
+
 std::optional<Options> ParseOptions(int argc, char** argv) {
   Options options;
 
@@ -53,42 +113,15 @@ std::optional<Options> ParseOptions(int argc, char** argv) {
     if (arg == "-h" || arg == "--help") {
       return std::nullopt;
     }
-    if (arg == "-c" || arg == "--conf") {
-      if (++i >= argc) {
-        std::cerr << arg << " requires a path\n";
-        return std::nullopt;
-      }
-      options.conf_path = argv[i];
-      continue;
-    }
-    if (arg == "-k" || arg == "--keyring") {
-      if (++i >= argc) {
-        std::cerr << arg << " requires a path\n";
-        return std::nullopt;
-      }
-      options.keyring_path = argv[i];
-      continue;
-    }
-    if (arg == "--name") {
-      if (++i >= argc) {
-        std::cerr << "--name requires a client entity name\n";
-        return std::nullopt;
-      }
-      options.client_name = argv[i];
-      continue;
-    }
-    if (arg == "--cluster") {
-      if (++i >= argc) {
-        std::cerr << "--cluster requires a cluster name\n";
-        return std::nullopt;
-      }
-      options.cluster_name = argv[i];
-      continue;
-    }
-    if (!arg.empty() && arg.front() == '-') {
-      std::cerr << "unknown option: " << arg << '\n';
+
+    const ParseResult result = ParseNamedOption(arg, argc, argv, i, options);
+    if (result == ParseResult::kError) {
       return std::nullopt;
     }
+    if (result == ParseResult::kParsed) {
+      continue;
+    }
+
     if (!options.pool.empty()) {
       std::cerr << "unexpected extra argument: " << arg << '\n';
       return std::nullopt;
