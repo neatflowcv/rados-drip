@@ -24,43 +24,46 @@ std::runtime_error RadosRuntimeError(const std::string& message, int ret) {
                             std::to_string(ret) + ")");
 }
 
-std::optional<std::string> DefaultKeyringPath(const Options& options) {
-  if (!options.conf_path) {
+std::optional<std::string> DefaultKeyringPath(
+    const std::optional<std::string>& conf_path,
+    const std::string& client_name) {
+  if (!conf_path) {
     return std::nullopt;
   }
 
-  const std::filesystem::path conf_path(*options.conf_path);
-  const std::filesystem::path conf_dir = conf_path.has_parent_path()
-                                             ? conf_path.parent_path()
+  const std::filesystem::path config_path(*conf_path);
+  const std::filesystem::path conf_dir = config_path.has_parent_path()
+                                             ? config_path.parent_path()
                                              : std::filesystem::path(".");
   const std::filesystem::path keyring_path =
-      conf_dir / ("ceph." + options.client_name + ".keyring");
+      conf_dir / ("ceph." + client_name + ".keyring");
   if (std::filesystem::exists(keyring_path)) {
     return keyring_path.string();
   }
   return std::nullopt;
 }
 
-void ConnectCluster(const Options& options, librados::Rados& cluster) {
-  int ret = cluster.init2(options.client_name.c_str(),
-                          options.cluster_name.c_str(), 0);
+void ConnectCluster(const std::optional<std::string>& conf_path,
+                    const std::optional<std::string>& keyring_path,
+                    const std::string& client_name,
+                    const std::string& cluster_name, librados::Rados& cluster) {
+  int ret = cluster.init2(client_name.c_str(), cluster_name.c_str(), 0);
   if (ret < 0) {
     throw RadosRuntimeError("rados init failed", ret);
   }
 
-  ret = cluster.conf_read_file(options.conf_path ? options.conf_path->c_str()
-                                                 : nullptr);
+  ret = cluster.conf_read_file(conf_path ? conf_path->c_str() : nullptr);
   if (ret < 0) {
     throw RadosRuntimeError("reading Ceph config failed", ret);
   }
 
-  const std::optional<std::string> keyring_path =
-      options.keyring_path ? options.keyring_path : DefaultKeyringPath(options);
-  if (keyring_path) {
-    ret = cluster.conf_set("keyring", keyring_path->c_str());
+  const std::optional<std::string> resolved_keyring_path =
+      keyring_path ? keyring_path : DefaultKeyringPath(conf_path, client_name);
+  if (resolved_keyring_path) {
+    ret = cluster.conf_set("keyring", resolved_keyring_path->c_str());
     if (ret < 0) {
-      throw RadosRuntimeError("setting keyring '" + *keyring_path + "' failed",
-                              ret);
+      throw RadosRuntimeError(
+          "setting keyring '" + *resolved_keyring_path + "' failed", ret);
     }
   }
 
@@ -70,30 +73,32 @@ void ConnectCluster(const Options& options, librados::Rados& cluster) {
   }
 }
 
-int ListObjects(const Options& options, librados::Rados& cluster) {
+int ListObjects(const std::string& pool,
+                const std::optional<std::string>& cursor,
+                librados::Rados& cluster) {
   int ret = 0;
   librados::IoCtx ioctx;
-  ret = cluster.ioctx_create(options.pool.c_str(), ioctx);
+  ret = cluster.ioctx_create(pool.c_str(), ioctx);
   if (ret < 0) {
-    std::cerr << "opening pool '" << options.pool
-              << "' failed: " << RadosError(ret) << " (" << ret << ")\n";
+    std::cerr << "opening pool '" << pool << "' failed: " << RadosError(ret)
+              << " (" << ret << ")\n";
     return 1;
   }
   ioctx.set_namespace(librados::all_nspaces);
 
-  librados::ObjectCursor cursor = ioctx.object_list_begin();
+  librados::ObjectCursor current = ioctx.object_list_begin();
   const librados::ObjectCursor end = ioctx.object_list_end();
-  if (options.cursor) {
-    if (!cursor.from_str(*options.cursor)) {
-      std::cerr << "invalid cursor: " << *options.cursor << '\n';
+  if (cursor) {
+    if (!current.from_str(*cursor)) {
+      std::cerr << "invalid cursor: " << *cursor << '\n';
       return 1;
     }
   }
 
   std::vector<librados::ObjectItem> objects;
   librados::ObjectCursor next;
-  ret =
-      ioctx.object_list(cursor, end, kObjectListBatchSize, {}, &objects, &next);
+  ret = ioctx.object_list(current, end, kObjectListBatchSize, {}, &objects,
+                          &next);
   if (ret < 0) {
     std::cerr << "listing objects failed: " << RadosError(ret) << " (" << ret
               << ")\n";
@@ -107,8 +112,8 @@ int ListObjects(const Options& options, librados::Rados& cluster) {
     std::cout << object.oid << '\n';
   }
 
-  std::cerr << "listed " << objects.size() << " object(s) from pool '"
-            << options.pool << "'\n";
+  std::cerr << "listed " << objects.size() << " object(s) from pool '" << pool
+            << "'\n";
   std::cerr << "next cursor: " << next.to_str() << '\n';
   if (ioctx.object_list_is_end(next)) {
     std::cerr << "end of object listing\n";
@@ -135,8 +140,9 @@ int main(int argc, char** argv) {
   }
   try {
     librados::Rados cluster;
-    ConnectCluster(*options, cluster);
-    const int ret = ListObjects(*options, cluster);
+    ConnectCluster(options->conf_path, options->keyring_path,
+                   options->client_name, options->cluster_name, cluster);
+    const int ret = ListObjects(options->pool, options->cursor, cluster);
     cluster.shutdown();
     return ret;
   } catch (const std::exception& error) {
