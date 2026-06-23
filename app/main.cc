@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 
+#include "app/config_new.h"
 #include "client/client.h"
 #include "options/options.h"
 
@@ -40,7 +41,13 @@ int main(int argc, char** argv) {
     return 2;
   }
   try {
-    if (options->host && options->key) {
+    if (options->config_new_path) {
+      const NewConfig config = ReadNewConfig(*options->config_new_path);
+      Client client({.host = config.hosts, .key = config.key},
+                    options->client_name, options->cluster_name);
+      PrintListObjectsResult(client.ListObjects(options->pool, options->cursor),
+                             options->pool);
+    } else if (options->host && options->key) {
       Client client(
           {.host = options->host.value(), .key = options->key.value()},
           options->client_name, options->cluster_name);

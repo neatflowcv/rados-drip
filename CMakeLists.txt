@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(rados-drip
+    app/config_new.cc
     app/main.cc
     client/client.cc
     client/object.cc

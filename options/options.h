@@ -7,6 +7,7 @@ struct Options {
   std::string pool;
   std::optional<std::string> conf_path;
   std::optional<std::string> keyring_path;
+  std::optional<std::string> config_new_path;
   std::optional<std::string> host;
   std::optional<std::string> key;
   std::optional<std::string> cursor;
