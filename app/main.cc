@@ -1,19 +1,23 @@
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <exception>
 #include <filesystem>
 #include <iostream>
 #include <optional>
 #include <rados/librados.hpp>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
+
+constexpr std::size_t kObjectListBatchSize = 1024;
 
 struct Options {
   std::string pool;
   std::optional<std::string> conf_path;
   std::optional<std::string> keyring_path;
+  std::optional<std::string> cursor;
   std::string client_name = "client.admin";
   std::string cluster_name = "ceph";
 };
@@ -27,7 +31,7 @@ enum class ParseResult : std::uint8_t {
 void PrintUsage(const char* program) {
   std::cerr << "Usage: " << program
             << " <pool> [-c ceph.conf] [--name client.admin]"
-               " [--cluster ceph] [-k keyring]\n";
+               " [--cluster ceph] [-k keyring] [--cursor cursor]\n";
 }
 
 std::string RadosError(int ret) {
@@ -96,6 +100,14 @@ ParseResult ParseNamedOption(const std::string& arg, int argc, char** argv,
       return ParseResult::kError;
     }
     options.cluster_name = *value;
+    return ParseResult::kParsed;
+  }
+  if (arg == "--cursor") {
+    const auto value = ReadOptionValue(argc, argv, index, arg, "a cursor");
+    if (!value) {
+      return ParseResult::kError;
+    }
+    options.cursor = *value;
     return ParseResult::kParsed;
   }
   if (!arg.empty() && arg.front() == '-') {
@@ -182,22 +194,39 @@ int ListObjects(const Options& options) {
   }
   ioctx.set_namespace(librados::all_nspaces);
 
-  try {
-    std::uint64_t count = 0;
-    for (auto object = ioctx.nobjects_begin(); object != ioctx.nobjects_end();
-         ++object) {
-      if (!object->get_nspace().empty()) {
-        std::cout << object->get_nspace() << '\t';
-      }
-      std::cout << object->get_oid() << '\n';
-      ++count;
+  librados::ObjectCursor cursor = ioctx.object_list_begin();
+  const librados::ObjectCursor end = ioctx.object_list_end();
+  if (options.cursor) {
+    if (!cursor.from_str(*options.cursor)) {
+      std::cerr << "invalid cursor: " << *options.cursor << '\n';
+      cluster.shutdown();
+      return 1;
     }
-    std::cerr << "listed " << count << " object(s) from pool '" << options.pool
-              << "'\n";
-  } catch (const std::exception& error) {
-    std::cerr << "listing objects failed: " << error.what() << '\n';
+  }
+
+  std::vector<librados::ObjectItem> objects;
+  librados::ObjectCursor next;
+  ret =
+      ioctx.object_list(cursor, end, kObjectListBatchSize, {}, &objects, &next);
+  if (ret < 0) {
+    std::cerr << "listing objects failed: " << RadosError(ret) << " (" << ret
+              << ")\n";
     cluster.shutdown();
     return 1;
+  }
+
+  for (const auto& object : objects) {
+    if (!object.nspace.empty()) {
+      std::cout << object.nspace << '\t';
+    }
+    std::cout << object.oid << '\n';
+  }
+
+  std::cerr << "listed " << objects.size() << " object(s) from pool '"
+            << options.pool << "'\n";
+  std::cerr << "next cursor: " << next.to_str() << '\n';
+  if (ioctx.object_list_is_end(next)) {
+    std::cerr << "end of object listing\n";
   }
 
   cluster.shutdown();
