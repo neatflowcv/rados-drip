@@ -21,6 +21,12 @@ cmake --build build
 clang-format -i app/main.cc
 ```
 
+## Lint
+
+```sh
+run-clang-tidy -p build -fix
+```
+
 ## Run
 
 ```sh
