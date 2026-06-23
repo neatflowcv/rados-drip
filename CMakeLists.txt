@@ -8,6 +8,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(rados-drip
     app/main.cc
+    options/options.cc
+)
+target_include_directories(rados-drip PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(rados-drip PRIVATE
     rados
