@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <optional>
 #include <string>
 
@@ -8,6 +9,7 @@ struct Options {
   std::string pool;
   std::optional<std::string> cursor;
   std::optional<std::string> output_path;
+  std::chrono::milliseconds delay{0};
   std::string client_name = "client.admin";
   std::string cluster_name = "ceph";
 };

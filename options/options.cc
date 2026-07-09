@@ -1,10 +1,14 @@
 #include "options.h"
 
+#include <charconv>
+#include <chrono>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 namespace {
 
@@ -50,6 +54,31 @@ ParseResult SetOptionValue(int argc, char** argv, int& index,
   return ParseResult::kParsed;
 }
 
+ParseResult SetDelayOption(int argc, char** argv, int& index,
+                           const std::string& option, Options& options) {
+  const auto value = ReadOptionValue(argc, argv, index, option,
+                                     "a non-negative millisecond count");
+  if (!value) {
+    return ParseResult::kError;
+  }
+
+  std::uint64_t parsed = 0;
+  const char* const begin = value->data();
+  const char* const end = begin + value->size();
+  const auto [ptr, error] = std::from_chars(begin, end, parsed);
+  using MillisecondRep = std::chrono::milliseconds::rep;
+  if (error != std::errc{} || ptr != end ||
+      parsed > static_cast<std::uint64_t>(
+                   std::numeric_limits<MillisecondRep>::max())) {
+    std::cerr << option << " requires a non-negative millisecond count\n";
+    return ParseResult::kError;
+  }
+
+  options.delay =
+      std::chrono::milliseconds{static_cast<MillisecondRep>(parsed)};
+  return ParseResult::kParsed;
+}
+
 ParseResult ParseNamedOption(const std::string& arg, int argc, char** argv,
                              int& index, Options& options) {
   if (arg == "--name") {
@@ -67,6 +96,9 @@ ParseResult ParseNamedOption(const std::string& arg, int argc, char** argv,
     return SetOptionValue(argc, argv, index, arg, "an output file",
                           options.output_path);
   }
+  if (arg == "--delay-ms") {
+    return SetDelayOption(argc, argv, index, arg, options);
+  }
   if (!arg.empty() && arg.front() == '-') {
     std::cerr << "unknown option: " << arg << '\n';
     return ParseResult::kError;
@@ -80,6 +112,7 @@ void PrintUsage(const char* program) {
   std::cerr << "Usage: " << program
             << " <config> <pool> [--cursor cursor]"
                " [--output file]"
+               " [--delay-ms milliseconds]"
                " [--name client.admin] [--cluster ceph]\n";
 }
 

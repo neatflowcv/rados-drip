@@ -1,3 +1,4 @@
+#include <chrono>
 #include <cstddef>
 #include <fstream>
 #include <iostream>
@@ -5,6 +6,7 @@
 #include <ostream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 
 #include "client/client.h"
 #include "config/config.h"
@@ -23,7 +25,7 @@ void PrintObjectList(const ListObjectsResult& results, std::ostream& output) {
 
 void PrintAllObjects(Client& client, const std::string& pool,
                      const std::optional<std::string>& initial_cursor,
-                     std::ostream& output) {
+                     std::chrono::milliseconds delay, std::ostream& output) {
   std::optional<std::string> cursor = initial_cursor;
   std::size_t object_count = 0;
 
@@ -47,6 +49,9 @@ void PrintAllObjects(Client& client, const std::string& pool,
       throw std::runtime_error("object listing cursor did not advance");
     }
     cursor = results.next_cursor;
+    if (delay > std::chrono::milliseconds{0}) {
+      std::this_thread::sleep_for(delay);
+    }
   }
 
   std::cerr << "listed " << object_count << " object(s) from pool '" << pool
@@ -80,9 +85,11 @@ int main(int argc, char** argv) {
         throw std::runtime_error("failed to open output file: " +
                                  *options->output_path);
       }
-      PrintAllObjects(client, options->pool, options->cursor, output);
+      PrintAllObjects(client, options->pool, options->cursor, options->delay,
+                      output);
     } else {
-      PrintAllObjects(client, options->pool, options->cursor, std::cout);
+      PrintAllObjects(client, options->pool, options->cursor, options->delay,
+                      std::cout);
     }
     return 0;
   } catch (const std::exception& error) {
