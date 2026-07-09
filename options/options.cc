@@ -63,6 +63,10 @@ ParseResult ParseNamedOption(const std::string& arg, int argc, char** argv,
   if (arg == "--cursor") {
     return SetOptionValue(argc, argv, index, arg, "a cursor", options.cursor);
   }
+  if (arg == "--output") {
+    return SetOptionValue(argc, argv, index, arg, "an output file",
+                          options.output_path);
+  }
   if (!arg.empty() && arg.front() == '-') {
     std::cerr << "unknown option: " << arg << '\n';
     return ParseResult::kError;
@@ -75,6 +79,7 @@ ParseResult ParseNamedOption(const std::string& arg, int argc, char** argv,
 void PrintUsage(const char* program) {
   std::cerr << "Usage: " << program
             << " <config> <pool> [--cursor cursor]"
+               " [--output file]"
                " [--name client.admin] [--cluster ceph]\n";
 }
 
