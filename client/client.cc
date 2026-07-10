@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstring>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -71,18 +72,37 @@ Client::~Client() {
   }
 }
 
-ListObjectsResult Client::ListObjects(
-    const std::string& pool, const std::optional<std::string>& cursor) {
-  int ret = 0;
+PoolContext Client::OpenPool(const std::string& pool,
+                             const ObjectNamespace& object_namespace) {
   librados::IoCtx ioctx;
-  ret = cluster_.ioctx_create(pool.c_str(), ioctx);
+  const int ret = cluster_.ioctx_create(pool.c_str(), ioctx);
   if (ret < 0) {
     throw RadosRuntimeError("opening pool '" + pool + "' failed", ret);
   }
-  ioctx.set_namespace(librados::all_nspaces);
+  ioctx.set_namespace(object_namespace.Value());
+  return {pool, std::move(ioctx)};
+}
 
-  librados::ObjectCursor current = ioctx.object_list_begin();
-  const librados::ObjectCursor end = ioctx.object_list_end();
+ObjectNamespace::ObjectNamespace(std::string value)
+    : value_(std::move(value)) {}
+
+ObjectNamespace ObjectNamespace::All() {
+  return ObjectNamespace{librados::all_nspaces};
+}
+
+const std::string& ObjectNamespace::Value() const { return value_; }
+
+PoolContext::PoolContext(std::string pool, librados::IoCtx ioctx)
+    : pool_(std::move(pool)), ioctx_(std::move(ioctx)) {}
+
+const std::string& PoolContext::Name() const { return pool_; }
+
+ListObjectsResult PoolContext::ListObjects(
+    const std::optional<std::string>& cursor) {
+  int ret = 0;
+
+  librados::ObjectCursor current = ioctx_.object_list_begin();
+  const librados::ObjectCursor end = ioctx_.object_list_end();
   if (cursor) {
     if (!current.from_str(*cursor)) {
       throw std::runtime_error("invalid cursor: " + *cursor);
@@ -91,10 +111,11 @@ ListObjectsResult Client::ListObjects(
 
   std::vector<librados::ObjectItem> objects;
   librados::ObjectCursor next;
-  ret = ioctx.object_list(current, end, kObjectListBatchSize, {}, &objects,
-                          &next);
+  ret = ioctx_.object_list(current, end, kObjectListBatchSize, {}, &objects,
+                           &next);
   if (ret < 0) {
-    throw RadosRuntimeError("listing objects failed", ret);
+    throw RadosRuntimeError("listing objects in pool '" + pool_ + "' failed",
+                            ret);
   }
 
   ListObjectsResult results;
@@ -103,19 +124,15 @@ ListObjectsResult Client::ListObjects(
     results.objects.emplace_back(object.oid, object.nspace);
   }
   results.next_cursor = next.to_str();
-  results.is_end = ioctx.object_list_is_end(next);
+  results.is_end = ioctx_.object_list_is_end(next);
   return results;
 }
 
-void Client::DeleteObject(const std::string& pool, const std::string& object) {
-  librados::IoCtx ioctx;
-  int ret = cluster_.ioctx_create(pool.c_str(), ioctx);
+void PoolContext::DeleteObject(const std::string& object) {
+  const int ret = ioctx_.remove(object);
   if (ret < 0) {
-    throw RadosRuntimeError("opening pool '" + pool + "' failed", ret);
-  }
-
-  ret = ioctx.remove(object);
-  if (ret < 0) {
-    throw RadosRuntimeError("deleting object '" + object + "' failed", ret);
+    throw RadosRuntimeError(
+        "deleting object '" + object + "' from pool '" + pool_ + "' failed",
+        ret);
   }
 }

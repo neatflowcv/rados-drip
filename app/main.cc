@@ -23,7 +23,7 @@ void PrintObjectList(const ListObjectsResult& results, std::ostream& output) {
   }
 }
 
-void PrintAllObjects(Client& client, const std::string& pool,
+void PrintAllObjects(PoolContext& pool,
                      const std::optional<std::string>& initial_cursor,
                      std::chrono::milliseconds delay, std::ostream& output) {
   std::optional<std::string> cursor = initial_cursor;
@@ -34,7 +34,7 @@ void PrintAllObjects(Client& client, const std::string& pool,
   }
 
   while (true) {
-    const ListObjectsResult results = client.ListObjects(pool, cursor);
+    const ListObjectsResult results = pool.ListObjects(cursor);
     PrintObjectList(results, output);
     object_count += results.objects.size();
     std::cerr << "next cursor: " << results.next_cursor << '\n';
@@ -54,8 +54,8 @@ void PrintAllObjects(Client& client, const std::string& pool,
     }
   }
 
-  std::cerr << "listed " << object_count << " object(s) from pool '" << pool
-            << "'\n";
+  std::cerr << "listed " << object_count << " object(s) from pool '"
+            << pool.Name() << "'\n";
   std::cerr << "end of object listing\n";
 }
 
@@ -79,17 +79,16 @@ int main(int argc, char** argv) {
     const Config config = ReadConfig(options->config_path);
     Client client({.host = config.hosts, .key = config.key},
                   options->client_name, options->cluster_name);
+    PoolContext pool = client.OpenPool(options->pool, ObjectNamespace::All());
     if (options->output_path) {
       std::ofstream output(*options->output_path);
       if (!output) {
         throw std::runtime_error("failed to open output file: " +
                                  *options->output_path);
       }
-      PrintAllObjects(client, options->pool, options->cursor, options->delay,
-                      output);
+      PrintAllObjects(pool, options->cursor, options->delay, output);
     } else {
-      PrintAllObjects(client, options->pool, options->cursor, options->delay,
-                      std::cout);
+      PrintAllObjects(pool, options->cursor, options->delay, std::cout);
     }
     return 0;
   } catch (const std::exception& error) {

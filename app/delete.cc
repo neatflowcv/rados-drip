@@ -220,7 +220,7 @@ bool ConfirmDeletion(const DeleteOptions& options,
   }
 }
 
-void DeleteObjects(Client& client, const DeleteOptions& options,
+void DeleteObjects(PoolContext& pool, const DeleteOptions& options,
                    std::ifstream& input) {
   std::string object;
   std::size_t line_number = 0;
@@ -234,7 +234,7 @@ void DeleteObjects(Client& client, const DeleteOptions& options,
     }
     std::cerr << "deleting object '" << object << "' from pool '"
               << options.pool << "'\n";
-    client.DeleteObject(options.pool, object);
+    pool.DeleteObject(object);
     ++object_count;
   }
   if (!input.eof()) {
@@ -279,7 +279,8 @@ int main(int argc, char** argv) {
     const Config config = ReadConfig(options->config_path);
     Client client({.host = config.hosts, .key = config.key},
                   options->client_name, options->cluster_name);
-    DeleteObjects(client, *options, objects_input);
+    PoolContext pool = client.OpenPool(options->pool);
+    DeleteObjects(pool, *options, objects_input);
     return 0;
   } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';
