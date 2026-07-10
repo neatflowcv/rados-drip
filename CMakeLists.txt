@@ -10,7 +10,7 @@ include(CTest)
 add_subdirectory(cli)
 
 add_executable(rados-drip
-    app/main.cc
+    app/drip.cc
     app/drip_options.cc
     client/client.cc
     client/object.cc

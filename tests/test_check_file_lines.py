@@ -36,7 +36,7 @@ class CheckFileLinesTest(unittest.TestCase):
         self.config.write_text(json.dumps({"overrides": overrides}), encoding="utf-8")
 
     def test_default_limit_accepts_exactly_100_lines(self) -> None:
-        source = self.write_source("app/main.cc", 100)
+        source = self.write_source("app/drip.cc", 100)
         self.write_config({})
 
         overrides = check_file_lines.load_overrides(self.config, self.root)
@@ -45,13 +45,13 @@ class CheckFileLinesTest(unittest.TestCase):
         self.assertEqual(violations, [])
 
     def test_default_limit_rejects_101_lines(self) -> None:
-        source = self.write_source("app/main.cc", 101)
+        source = self.write_source("app/drip.cc", 101)
         self.write_config({})
 
         overrides = check_file_lines.load_overrides(self.config, self.root)
         violations = check_file_lines.check_files([source], self.root, overrides)
 
-        self.assertEqual(violations, ["app/main.cc: 101 lines (limit: 100)"])
+        self.assertEqual(violations, ["app/drip.cc: 101 lines (limit: 100)"])
 
     def test_justified_override_raises_limit(self) -> None:
         source = self.write_source("client/client.cc", 200)

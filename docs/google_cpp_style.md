@@ -62,7 +62,7 @@ foo_bar_test.cc
 
 ## 포맷
 
-- 이 프로젝트에서는 `clang-format -i app/main.cc`로 포맷한다.
+- 이 프로젝트에서는 `clang-format -i app/drip.cc`로 포맷한다.
 - 기존 코드 스타일이 있으면 그 스타일을 우선한다.
 
 참고: [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html)
