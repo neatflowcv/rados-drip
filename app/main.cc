@@ -1,5 +1,6 @@
 #include <chrono>
 #include <cstddef>
+#include <exception>
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -8,9 +9,9 @@
 #include <string>
 #include <thread>
 
+#include "app/drip_options.h"
 #include "client/client.h"
 #include "config/config.h"
-#include "options/options.h"
 
 namespace {
 
@@ -65,14 +66,14 @@ int main(int argc, char** argv) {
   if (argc == 2) {
     const std::string arg = argv[1];
     if (arg == "-h" || arg == "--help") {
-      PrintUsage(argv[0]);
+      drip::PrintUsage(argv[0]);
       return 0;
     }
   }
 
-  const auto options = ParseOptions(argc, argv);
+  const auto options = drip::ParseOptions(argc, argv);
   if (!options) {
-    PrintUsage(argv[0]);
+    drip::PrintUsage(argv[0]);
     return 2;
   }
   try {

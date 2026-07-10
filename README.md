@@ -26,6 +26,22 @@ chmod 600 rados-drip.conf
 ./build/rados-drip rados-drip.conf <pool>
 ```
 
+## 테스트
+
+GTest를 설치한 뒤 테스트를 포함해 프로젝트를 빌드하고 CTest로 실행합니다.
+
+```sh
+cmake -S . -B build -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+특정 테스트만 실행하려면 `-R`에 테스트 이름의 정규식을 전달합니다.
+
+```sh
+ctest --test-dir build -R ParserTest --output-on-failure
+```
+
 ## 파일 라인 수 검사
 
 C/C++ 소스 파일은 기본적으로 100줄까지 허용합니다. 응집된 책임을 유지하기

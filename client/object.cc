@@ -1,5 +1,6 @@
 #include "client/object.h"
 
+#include <string>
 #include <utility>
 
 Object::Object(std::string name, std::string object_namespace)

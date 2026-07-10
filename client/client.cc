@@ -2,7 +2,11 @@
 
 #include <cstddef>
 #include <cstring>
+#include <optional>
+#include <rados/librados.hpp>
+#include <rados/rados_types.hpp>
 #include <stdexcept>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -87,6 +91,8 @@ ObjectNamespace::ObjectNamespace(std::string value)
     : value_(std::move(value)) {}
 
 ObjectNamespace ObjectNamespace::All() {
+  // rados_types.hpp defines this symbol, but include-cleaner cannot trace it.
+  // NOLINTNEXTLINE(misc-include-cleaner)
   return ObjectNamespace{librados::all_nspaces};
 }
 

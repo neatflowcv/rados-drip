@@ -5,7 +5,8 @@ This is a small C++ project using CMake.
 ## Layout
 
 - `CMakeLists.txt`: root CMake configuration
-- `app/main.cc`: application entry point
+- `app/`: application entry points and executable-specific options
+- `cli/`: shared command-line parsing
 - `config/`: configuration parsing
 - `build/`: local CMake build output
 
@@ -19,7 +20,7 @@ cmake --build build
 ## Format
 
 ```sh
-clang-format -i app/main.cc config/config.cc config/config.h
+clang-format -i app/*.cc app/*.h cli/*.cc cli/*.h config/*.cc config/*.h client/*.cc client/*.h
 ```
 
 ## Lint
@@ -30,13 +31,15 @@ run-clang-tidy -p build -fix
 
 ## Verify
 
-Before handing off changes, run format, lint, build, and help output checks.
+Before handing off changes, run format, lint, build, tests, and help output checks.
 
 ```sh
-clang-format -i app/main.cc config/config.cc config/config.h client/client.cc client/client.h client/object.cc client/object.h options/options.cc options/options.h
+clang-format -i app/*.cc app/*.h cli/*.cc cli/*.h config/*.cc config/*.h client/*.cc client/*.h
 run-clang-tidy -p build -fix
 cmake --build build
+ctest --test-dir build --output-on-failure
 ./build/rados-drip --help
+./build/rados-delete --help
 ```
 
 ## Run

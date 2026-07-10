@@ -1,6 +1,7 @@
 Checks: >
   clang-analyzer-*,
   bugprone-*,
+  misc-include-cleaner,
   performance-*,
   portability-*,
   -portability-avoid-pragma-once,
