@@ -2,5 +2,8 @@
 !.gitignore
 !.clang-tidy
 !.clang-format
+!.line-limits.json
 
 /build/
+__pycache__/
+*.py[cod]

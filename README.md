@@ -25,3 +25,31 @@ key = AQB...
 chmod 600 rados-drip.conf
 ./build/rados-drip rados-drip.conf <pool>
 ```
+
+## 파일 라인 수 검사
+
+C/C++ 소스 파일은 기본적으로 100줄까지 허용합니다. 응집된 책임을 유지하기
+위해 더 긴 파일이 필요하면 `.line-limits.json`에 사유와 함께 100줄 단위로
+제한을 올릴 수 있으며, 절대 상한은 500줄입니다. 빈 줄과 주석을 포함한 실제
+파일 라인 수를 계산합니다.
+
+```sh
+python3 scripts/check_file_lines.py
+```
+
+예외는 다음과 같이 기록합니다.
+
+```json
+{
+  "overrides": {
+    "client/client.cc": {
+      "max_lines": 200,
+      "reason": "하나의 응집된 프로토콜 구현을 함께 유지"
+    }
+  }
+}
+```
+
+`max_lines`에는 `200`, `300`, `400`, `500`만 사용할 수 있습니다. 검사를
+통과하면 종료 코드 `0`, 라인 제한을 위반하면 `1`, 설정이나 파일을 읽을 수
+없으면 `2`를 반환합니다.
