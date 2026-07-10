@@ -1,3 +1,8 @@
 {
-  "overrides": {}
+  "overrides": {
+    "app/delete.cc": {
+      "max_lines": 200,
+      "reason": "객체 삭제 CLI의 응집된 실행 흐름을 함께 유지"
+    }
+  }
 }
