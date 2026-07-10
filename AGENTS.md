@@ -20,7 +20,7 @@ cmake --build build
 ## Format
 
 ```sh
-clang-format -i app/*.cc app/*.h cli/*.cc cli/*.h config/*.cc config/*.h client/*.cc client/*.h
+clang-format -i $(find . -path ./build -prune -o -type f \( -name '*.cc' -o -name '*.h' \) -print)
 ```
 
 ## Lint
@@ -34,7 +34,7 @@ run-clang-tidy -p build -fix
 Before handing off changes, run format, lint, build, tests, and help output checks.
 
 ```sh
-clang-format -i app/*.cc app/*.h cli/*.cc cli/*.h config/*.cc config/*.h client/*.cc client/*.h
+clang-format -i $(find . -path ./build -prune -o -type f \( -name '*.cc' -o -name '*.h' \) -print)
 run-clang-tidy -p build -fix
 cmake --build build
 ctest --test-dir build --output-on-failure
