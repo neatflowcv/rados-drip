@@ -11,6 +11,7 @@
 
 #include "app/drip_options.h"
 #include "client/client.h"
+#include "client/pool_context.h"
 #include "config/config.h"
 
 namespace {

@@ -14,6 +14,8 @@ add_executable(rados-drip
     app/drip_options.cc
     client/client.cc
     client/object.cc
+    client/pool_context.cc
+    client/rados_error.cc
     config/config.cc
 )
 target_include_directories(rados-drip PRIVATE
@@ -29,6 +31,8 @@ add_executable(rados-delete
     app/delete_options.cc
     client/client.cc
     client/object.cc
+    client/pool_context.cc
+    client/rados_error.cc
     config/config.cc
 )
 target_include_directories(rados-delete PRIVATE
