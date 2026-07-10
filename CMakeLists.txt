@@ -19,3 +19,16 @@ target_include_directories(rados-drip PRIVATE
 target_link_libraries(rados-drip PRIVATE
     rados
 )
+
+add_executable(rados-delete
+    app/delete.cc
+    client/client.cc
+    client/object.cc
+    config/config.cc
+)
+target_include_directories(rados-delete PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(rados-delete PRIVATE
+    rados
+)

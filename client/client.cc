@@ -106,3 +106,16 @@ ListObjectsResult Client::ListObjects(
   results.is_end = ioctx.object_list_is_end(next);
   return results;
 }
+
+void Client::DeleteObject(const std::string& pool, const std::string& object) {
+  librados::IoCtx ioctx;
+  int ret = cluster_.ioctx_create(pool.c_str(), ioctx);
+  if (ret < 0) {
+    throw RadosRuntimeError("opening pool '" + pool + "' failed", ret);
+  }
+
+  ret = ioctx.remove(object);
+  if (ret < 0) {
+    throw RadosRuntimeError("deleting object '" + object + "' failed", ret);
+  }
+}

@@ -26,6 +26,7 @@ class Client {
 
   ListObjectsResult ListObjects(const std::string& pool,
                                 const std::optional<std::string>& cursor);
+  void DeleteObject(const std::string& pool, const std::string& object);
 
   Client(const Client&) = delete;
   Client& operator=(const Client&) = delete;
